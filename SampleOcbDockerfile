@@ -1,0 +1,78 @@
+### sameple docker file of OCB
+FROM registry.access.redhat.com/rhel7.4
+
+ENV RUNNING_INSIDE_DOCKER true
+ARG http_proxy=http://genproxy.amdocs.com:8080/
+ARG HTTP_PROXY=http://genproxy.corp.amdocs.com:8080/
+ARG https_proxy=http://genproxy.amdocs.com:8080/
+ARG HTTPS_PROXY=http://genproxy.corp.amdocs.com:8080/
+ARG FTP_PROXY=http://genproxy.corp.amdocs.com:8080/
+ARG ftp_proxy=http://genproxy.corp.amdocs.com:8080/
+ARG no_proxy=localhost,127.0.0.1,.amdocs.com
+ARG no_proxy=localhost,127.0.0.1,localaddrees,.localdomain.com,illinlic01,linvc04,docker01,/var/run/docker.sock,.sock,.corp.amdocs.com,.amdocs.com,.cloudnative,.cloudnative.corp.amdocs.com
+ARG NO_PROXY=localhost,127.0.0.1,localaddress,.localdomain.com,illinlic01,linvc04,docker01,/var/run/docker.sock,.sock,.corp.amdocs.com,.amdocs.com,.cloudnative,.cloudnative.corp.amdocs.com
+ARG no_http_proxy=localhost,127.0.0.1,localaddress,.localdomain.com,illinlic01,linvc04,docker01,/var/run/docker.sock,.sock,.corp.amdocs.com,.amdocs.com,.cloudnative,.cloudnative.corp.amdocs.com
+
+COPY amd-external-pci-pmx-10.2.repo /etc/yum.repos.d/amd-external-pci-pmx-10.2.repo
+COPY prod.repo /etc/yum.repos.d/mssql-release.repo
+COPY oracle-client.repo /etc/yum.repos.d/oracle-client.repo
+COPY mssql-release.repo /etc/yum.repos.d/mssql-release.repo
+
+#yum install -y https://centos7.iuscommunity.org/ius-release.rpm && \
+
+RUN yum update -y && yum install -y oracle-instantclient18.3-sqlplus && \
+        rm -rf /etc/yum.repos.d/oracle-client.repo && \
+        yum -y install epel-release gcc gcc-c++ unixodbc-dev unixODBC unixODBC-devel openssl-devel bzip2-devel libffi-devel wget && \
+        yum -y install telnet bind-utils iputils && \
+        ACCEPT_EULA=Y yum install -y msodbcsql17 && \
+        yum --disablerepo=* --enablerepo=rhel-7-server-rpms,rhel-7-server-extras-rpms install -y libev-devel postgresql-devel  git && \
+        cd /usr/src && \
+        wget --no-check-certificate https://www.python.org/ftp/python/3.7.0/Python-3.7.0.tgz && \
+        tar xzf Python-3.7.0.tgz && \
+        cd Python-3.7.0 && \
+        ./configure --enable-optimizations && \
+        make install && \
+        rm -f /usr/src/Python-3.7.0.tgz  && \
+        pip3.7 install --trusted-host pypi.org --trusted-host files.pythonhosted.org --upgrade pip && \
+        rm -rf /etc/yum.repos.d/amd-external-pci-pmx-10.2.repo && \
+        rm -rf /etc/yum.repos.d/*.repo && \
+        yum clean all && \
+        rm -rf /var/cache/yum && \
+        cd /usr/src
+COPY requirements.txt .
+RUN pip3.7 install  --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
+ENV LOG_PATH=/app/logs
+ENV ORACLE_HOME /usr/lib/oracle/18.3/client64
+ENV PATH ${PATH}:${ORACLE_HOME}/bin
+ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/usr/lib/oracle/18.3/client64/lib
+ENV OP_LOG_DIR=/app/OCB_ENGINE_CODE/ocb_logs/
+WORKDIR /app
+COPY . /app
+ENTRYPOINT ["/bin/sh"]
+CMD ["/app/pythonRun.sh"]
+
+
+
+# This is a fix after the dependency Werkzeug for Flask was updated. Contact Mehul/Dhagash for issues related to this
+# Remove it after updating Flask to >=1.0
+Flask==0.12.4
+bjoern==3.0.0
+httplib2==0.12.3
+python-dateutil==2.8.0
+gevent==1.4.0
+json2html==1.2.1
+paramiko==2.4.2
+jsons==0.8.9
+cx_Oracle==7.1.3
+fabric2==2.4.0
+futures==3.1.1
+xlrd==1.2.0
+xlwt==1.3.0
+PyMySQL==0.9.3
+pyodbc==4.0.23
+pg8000==1.13.1
+requests==2.15.1
+luigi==2.8.12
+apscheduler==3.6.3
+psycopg2==2.8.5
+kafka-python==2.0.1
